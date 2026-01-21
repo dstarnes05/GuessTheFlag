@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     @State var countries = ["Estonia", "France", "Germany", "Ireland", "Italy", "Nigeria", "Poland", "Spain", "UK", "Ukraine", "US"].shuffled()
     @State var correctAnswer = Int.random(in: 0...2)
+    @State var selectedAnswer = -1
     
     @State private var showingScore = false
     @State private var gameComplete = false
@@ -57,10 +58,18 @@ struct ContentView: View {
                     
                     ForEach(0..<3) { number in
                         Button {
-                            flagTapped(number)
+                            withAnimation(.linear(duration: 1.0)) {
+                                flagTapped(number)
+                            }
                         } label: {
                             FlagImage(content: countries[number])
                         }
+                            .rotation3DEffect(.degrees(number == correctAnswer && selectedAnswer == correctAnswer ? 360 : 0), axis: (x: 0, y: 1, z: 0))
+                            
+                            .opacity(selectedAnswer == -1 ? 1 : (number == correctAnswer ? 1 : 0.25))
+                        
+                            .rotation3DEffect(.degrees(number != correctAnswer && selectedAnswer != correctAnswer ? 360 : 0), axis: (x: 0, y: 1, z: 1))
+                            
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -91,6 +100,8 @@ struct ContentView: View {
     
     func flagTapped(_ number: Int) {
         questionsAsked += 1
+        selectedAnswer = number
+        
         if number == correctAnswer {
             scoreTitle = "Correct"
             playerScore += 1
@@ -102,13 +113,21 @@ struct ContentView: View {
                 gameComplete = true
             }
             
-            showingScore = true
+        Task {
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            await MainActor.run {
+                showingScore = true
+            }
+        }
         }
 
 
     func askQuestion() {
-        countries.shuffle()
-        correctAnswer = Int.random(in: 0...2)
+        withAnimation(.none) {
+            countries.shuffle()
+            correctAnswer = Int.random(in: 0...2)
+            selectedAnswer = -1
+        }
     }
     
     func resetGame() {
